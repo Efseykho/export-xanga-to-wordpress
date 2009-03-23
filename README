@@ -1,0 +1,52 @@
+=========================ABOUT=========================
+Remember the glory-days of blogging; when it was still new and exciting? When people did not quite know what to make of it? Back before it was about self-promotion and aggrandizement. Yeah, that'd be like 8 years ago.
+
+Back then, there were only a few blogging platforms. Xanga was one of the majors, lj was the other. All the 'cool kids' were on lj cause it was the hip, emo-place to be. Also cause they had excellent support for groups and their comment system was solid. Xanga was at that time trying to be hip and anti-emo; gray themes were banned outright, I think. Anyway, it was a cool place for a few years and even though the audience was less 'mature' than a lot of other places, it had a very tight-knit community of interesting people behind it.
+
+This was sometime before they went and turned into an MS-sweat shop and started showing obnoxious ads. Now, its faded into irrelevance. 
+
+Long story short, if you have/had an account and would like to pull your data out of it, this will scrape xanga with your username/pw and write out a wordpress-compatible xml for import.
+
+Here's what wordpress suggests you use:
+http://codex.wordpress.org/Importing_Content
+"xanga.r is a program that parses xanga pages to get the post and comments. Then it can output them in the WordPress rss 2.0 xml format for WordPress to import."
+
+The script's got some limitations, etc and did not work for me. Since I could not figure out what was wrong with it, I thought I'd rewrite it myself and practice ruby all at the same time.
+
+
+=========================Dependencies=========================
+Mechanize and Hpricot >=0.7
+Hpricot did not handle complex xml that well prior to that release. It might work for you but I can't guarantee it.
+
+
+=========================Usage=========================
+      XangaScraper.new("user-name","password").scrape(:max_blog_entries => 3 )
+This will scrape the xanga account of given user with the provided password and output a wordpress.xml in the cwd.
+You can then try importing it into wordpress. Good luck!
+
+Options passable to XangaScraper:
+    @options[:default_title] = "My Awesome Title"
+    @options[:default_link] = "http://default.wordpress.com"
+    @options[:default_description] = "My Awesome Description"
+    @options[:pub_date] = "Tue, 10 Mar 2009 00:12:59 +0000"
+    @options[:base_blog_url] = "http://default.wordpress.com"
+    @options[:creator] = "Hiro"
+  
+  Options passable to XangaScraper::scrape:
+    options[:max_blog_entries] = nil #max number of entries to scrape, defaults to scraping everything
+    
+=========================Limitations=========================
+* Comments are not scraped right now; coming soon!
+* I don't really know ruby. Like, AT ALL. Please be gentle with my c0dez.
+
+
+=========================ToDo=========================
+* scrape comments from xanga and add to exported xml
+* add licensing info, i spose, to make it look more real
+* maybe rdoc-style comments
+
+
+=========================HISTORY=========================
+03-18-2009: first commit, working scraping of xanga acct. Able to form xml acceptable to wordpress. No comments yet.
+03-23-2009: refactor to use heredocs instead of external xml files
+
