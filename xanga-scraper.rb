@@ -140,9 +140,11 @@ class XangaScraper
   #INPUT: page returne by login
   #OUTPUT: page of my weblog
   def goto_weblog(page)
-    #generally speaking, we want to goto "http://www.xanga.com/[username]"
-    page = @agent.click page.links.href('http://www.xanga.com/' + "#{@user}").first
+    #generally speaking, we want to goto "http://[username].xanga.com/
+
+    page = @agent.click page.links.href("http://#{@user}.xanga.com/").first
   end
+  
   
   #this should be called ONCE: it logs you in
   #INPUT: none but uses (@user,@pw)
