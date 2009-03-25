@@ -2,7 +2,7 @@
 Remember the glory-days of blogging; when it was still new and exciting? When people did not quite know what to make of it? Back before it was about self-promotion and aggrandizement. Yeah, that'd be like 8 years ago.
 
 Back then, there were only a few blogging platforms. Xanga was one of the majors, lj was the other. All the 'cool kids' were on lj cause it was the hip, emo-place to be. Also cause they had excellent support for groups and their comment system was solid. Xanga was at that time trying to be hip and anti-emo; gray themes were banned outright, I think. Anyway, it was a cool place for a few years and even though the audience was less 'mature' than a lot of other places, it had a very tight-knit community of interesting people behind it.
-
+    
 This was sometime before they went and turned into an MS-sweat shop and started showing obnoxious ads. Now, its faded into irrelevance. 
 
 Long story short, if you have/had an account and would like to pull your data out of it, this will scrape xanga with your username/pw and write out a wordpress-compatible xml for import.
