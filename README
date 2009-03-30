@@ -13,6 +13,8 @@ http://codex.wordpress.org/Importing_Content
 
 The script's got some limitations, etc and did not work for me. Since I could not figure out what was wrong with it, I thought I'd rewrite it myself and practice ruby all at the same time.
 
+This looks very promising but I've not used it myself cause by the time I found out about it, I'd already written my c0dez.
+http://code.google.com/p/google-blog-converters-appengine/
 
 =========================Dependencies=========================
 Mechanize and Hpricot >=0.7
@@ -36,12 +38,15 @@ Options passable to XangaScraper:
     options[:max_blog_entries] = nil #max number of entries to scrape, defaults to scraping everything
     
 =========================Limitations=========================
-* Comments are not scraped right now; coming soon!
+* Only first page of comments is scraped (up to 25, methinks).
 * I don't really know ruby. Like, AT ALL. Please be gentle with my c0dez.
-
+* Hierarchical structure of comments is destroyed when imported into
+   wordpress. For right now, I think its a bug in wordpress. Will investigate
+   as time allows.
 
 =========================ToDo=========================
-* scrape comments from xanga and add to exported xml
+* scrape multi-page of comments; I currently scrape <= 25
+* figure out why on import all hierarchical comment info is lost
 * add licensing info, i spose, to make it look more real
 * maybe rdoc-style comments
 
@@ -49,4 +54,4 @@ Options passable to XangaScraper:
 =========================HISTORY=========================
 03-18-2009: first commit, working scraping of xanga acct. Able to form xml acceptable to wordpress. No comments yet.
 03-23-2009: refactor to use heredocs instead of external xml files
-
+03-29-2009: add scraping of upto 1 page of comments
