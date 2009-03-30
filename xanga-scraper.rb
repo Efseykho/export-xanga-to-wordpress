@@ -22,12 +22,16 @@ class XangaScraper
     @blog = nil
     
     @max_blog_entries = nil #as specified in scrape
-    @curr_blog_entries = 0 #local loop variable
+    @curr_blog_entries = 1 #local loop variable
     
     @completed = false #stop scraping if @completed
     @options = opts #options which get filled in by templates 
     
     @doc = nil #Hpricot document representing the xml file
+    
+    @comment_id = 1 #represents fixed comment id, increased for each comment
+    @comment_hash = Hash.new #how we store hierarchical comments
+                                            # [key in xanga] => @comment_id
 
     #for now, just set options to default
     set_default_options if @options == nil 
@@ -99,6 +103,7 @@ class XangaScraper
     blog_date_1 = nil #the first part of the pubDate field goes into here
     blog_body = nil #the body text goes here
     blog_date_2 = nil #the second part of the pubDate field goes into here
+    comments_arr = nil #temporary storage for comments before they get added to main document
     
     #select on td id=maincontent
     page.search('#maincontent')[0].each_child{ |child|
@@ -124,8 +129,20 @@ class XangaScraper
       #inside class blogbody, lives a class smalltext, and we want the inner_html of the second <a href> tag
       blog_date_2 = convert_to_usable_time(child.search('.blogbody')[0].search('.smalltext')[0].search("a")[1].inner_html)
       
+      #create teh new document out of blogheader and blogfooter
       doc = create_new_xml_blog( blog_body, blog_date_1 + blog_date_2 )
       
+      #catch comments here
+      #inside class blogbody, lives a class smalltext, and we want the inner_html of the fifth <a href> tag
+      if child.search('.blogbody')[0].search('.smalltext')[0].search("a")[4].inner_html != "add comments"
+        comments_arr =scrape_comments( Hpricot::Elements[ child.search('.blogbody')[0].search('.smalltext')[0].search("a")[4] ].attr("href") )
+        comments_arr.each { |comment| 
+          doc.search("item").append(comment.inner_html.to_s)
+          #p "adding comment here #{comment.inner_html.to_s}"
+        }
+        #dump_page(doc)
+      end
+
       #add resulting document to the @doc object already created
       @doc.search("channel").append(doc.inner_html.to_s)
 
@@ -134,6 +151,149 @@ class XangaScraper
       
     }
   end
+  
+  #this will click provided link and create a structure of comments for insertions into current blog
+  #input: link of comments to scrape
+  #output Hpricot document representing comments
+  def scrape_comments(href)
+    p "scraping comments #{href}"
+    
+    comments = Array.new
+    
+    
+    #begin transaction to get comments
+    @agent.transact {
+      page = @agent.get(href)
+      
+      page.search(".ctextfooterwrap").each{ |elem|
+        #each ctextfooterwrap is a comment
+        #a textfooter wrap is composed of ctext and cfooter
+        
+        #create our blog comment template
+        str = <<-eos
+<wp:comment>
+<wp:comment_id></wp:comment_id>
+<wp:comment_author><![CDATA[]]></wp:comment_author>
+<wp:comment_author_email></wp:comment_author_email>
+<wp:comment_author_url></wp:comment_author_url>
+<wp:comment_author_IP></wp:comment_author_IP>
+<wp:comment_date></wp:comment_date>
+<wp:comment_date_gmt></wp:comment_date_gmt>
+<wp:comment_content><![CDATA[]]></wp:comment_content>
+<wp:comment_approved>1</wp:comment_approved>
+<wp:comment_type></wp:comment_type>
+<wp:comment_parent>0</wp:comment_parent>
+<wp:comment_user_id>0</wp:comment_user_id>
+</wp:comment>
+        eos
+        
+        doc = Hpricot.XML(str)
+        
+        #this gives us the string with type= "Posted 3/24/2009 8:45 PM by anon ymos - delete - reply"
+        str_arr = elem.search(".cfooter").inner_text.split(" ")
+        #wp:comment_date/wp:comment_date_gmt have format of: 2009-03-10 00:12:22
+        str_arr[1] = str_arr[1].split("/") #first we must fix format of year
+        
+        str_arr[1][0]= "0" + str_arr[1][0].to_s if str_arr[1][0].to_s.size == 1  #we want month padded to 2 digits
+        str_arr[1][1]= "0" + str_arr[1][1].to_s if str_arr[1][0].to_s.size == 1  #we want day padded to 2 digits
+        
+        str_arr[1] = str_arr[1][2] + "-" + str_arr[1][0] + "-" + str_arr[1][1]
+        str_arr[2] = convert_to_usable_time(str_arr[2] + " " +  str_arr[3] ).split(" ")[0]
+        str_arr[1] = str_arr[1] + " " + str_arr[2]
+        
+        p "date is #{str_arr[1]}"
+        doc.search("wp:comment_date").inner_html = str_arr[1]
+        doc.search("wp:comment_date_gmt").inner_html = str_arr[1]
+
+        #set comment id to next value
+        doc.search("wp:comment_id").inner_html = "#{@comment_id}"
+        
+        #author is found in str_arr at element index=5 and continues till we find element "-"
+        temp = ""
+        while str_arr[5] != "-"
+          temp = temp + str_arr[5] + " "
+          str_arr.delete_at(5)
+        end
+        
+        #in case of anonymous commenter, they can leave a site url in the name
+        #thanks be to glorious xanga dom-design engineer but we now have to take that out
+        temp = temp.gsub(/\(.*\)/, "")
+        
+        while temp[-1] == 32
+          temp.chop!
+        end 
+        
+        doc.search("wp:comment_author").inner_html = "<![CDATA[#{temp}]]>"
+        p "author= #{temp}"
+        
+        #author email is not present?
+        #comment_author_IP is not present?
+        
+        # fill in comment_author_url
+        #if cfooter contains 2, or 3  href tags, we've got an anonymous comment
+        #if 2, then anonymous and no url provided
+        #if 3, then anonymous and url provided
+        temp = elem.search(".cfooter").search("a")
+        if temp.length == 3 #first link is provided 'site' url
+          temp[0] = temp[0].to_s
+          temp[0] = temp[0].slice(/href=\".*\"/).gsub("href=\"","").gsub("\"","")
+          
+          p "comment author=#{temp[0]}"
+          doc.search("wp:comment_author_url").inner_html = temp[0]
+        elsif temp.length == 4 #second link is provided user that commented
+          temp[1] = temp[1].to_s
+          temp[1] = temp[1].slice(/href=\".*\"/).gsub("href=\"","").gsub("\"","")
+          
+          p "comment author=#{temp[1]}"
+          doc.search("wp:comment_author_url").inner_html = temp[1]
+        end
+        
+        #capture comment id for hierarchical sorting
+        temp = elem.search(".cfooter").search("a[@onclick]").to_s
+        temp = temp.slice( /direction=n#\d*\'/).gsub("direction=n#","")
+        @comment_hash[temp.to_i] = @comment_id #register comment id
+        p "key #{temp.to_i} added to comment id=#{@comment_id}"
+        @comment_id += 1
+        
+        #capture if this elem has parent-id
+        #ctext:class=teplyto x--PARENTID--x
+        temp = elem.search(".ctext").search(".replyto")
+        if temp.size == 1
+          temp = temp[0].to_s
+          temp = temp.slice!(/x--\d*--x/)
+          temp.gsub!("x--","")
+          temp.gsub!("--x","")
+          
+          #p "lookup parent-id= #{temp}"
+          temp = @comment_hash[temp.to_i]
+          
+          p "parent id= #{temp}"
+          doc.search("wp:comment_parent").inner_html = "#{temp.to_i}"
+          
+          #additionally, this takes a special key thingamajic
+          doc.search("wp:comment_user_id").inner_html = "6074067"
+          
+        elsif temp.size > 1 #this should NEVER happen, cant have >1 replyto element
+          p "This is an error!"
+          throw Exception.new("More than 1 replyto element found")
+        end #end: if temp.size == 1
+        
+        #finally, insert comment-content where it belongs
+        temp = elem.search(".ctext").inner_text
+        p "comment=#{temp}"
+        doc.search("wp:comment_content").inner_html = "<![CDATA[#{temp}]]>"
+        
+        #add document model for the comment to the list of arrays
+        comments.push(doc)
+        
+      }#end:page.search(".ctextfooterwrap").each{ |elem|
+    }#end:@agent.transact {
+    
+    #TODO: figure out if we need to recurse further down to get next 25 comments?
+    
+    comments
+  end
+  
 
   
   #this takes output for login and goes to my actual weblog
@@ -179,7 +339,8 @@ class XangaScraper
     @blog.flush
   end
   
-    def write_blog_body(str)
+  
+  def write_blog_body(str)
     #assuming that @blog has already been created
 
     @blog.puts("[BLOG BODY]\n")
@@ -322,7 +483,7 @@ class XangaScraper
     doc.search("wp:post_id")[0].inner_html =  "#{@curr_blog_entries}"
 
     #I've a conflict with my Time class; so I have to hack around, so sorry
-    #time: time formatted as Tue, 10 Mar 2009 00:12:59 +0000
+    #input: time formatted as Tue, 10 Mar 2009 00:12:59 +0000
     #output:  2009-03-10 00:12:59, for example
     def convert_to_wp_post_date(time)
       ret = time.split(" ")
