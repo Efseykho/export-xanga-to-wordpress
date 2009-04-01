@@ -55,3 +55,4 @@ Options passable to XangaScraper:
 03-18-2009: first commit, working scraping of xanga acct. Able to form xml acceptable to wordpress. No comments yet.
 03-23-2009: refactor to use heredocs instead of external xml files
 03-29-2009: add scraping of upto 1 page of comments
+03-31-2009: fix bug; I thought gsub! would return modified string; it does not. I'm a dummy!

@@ -125,6 +125,8 @@ class XangaScraper
       #this is body of the blog
       blog_body = sanitize_blog_body(child.search("td")[1].inner_html)
       
+      p "blog body=#{blog_body}"
+      
       #extract the date of blog for archiving purposes
       #inside class blogbody, lives a class smalltext, and we want the inner_html of the second <a href> tag
       blog_date_2 = convert_to_usable_time(child.search('.blogbody')[0].search('.smalltext')[0].search("a")[1].inner_html)
@@ -144,7 +146,7 @@ class XangaScraper
       end
 
       #add resulting document to the @doc object already created
-      @doc.search("channel").append(doc.inner_html.to_s)
+      @doc.search("channel").append(doc.inner_html.to_s) 
 
       @curr_blog_entries += 1
     end
@@ -594,6 +596,8 @@ class XangaScraper
   def sanitize_blog_body(str)
     ret = str.gsub("<h4 class=\"itemTitle\"></h4>", " ")
     ret.gsub!("<br />","\n")
+    
+    ret
   end
   
 end
