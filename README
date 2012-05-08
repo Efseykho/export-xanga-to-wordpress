@@ -56,3 +56,6 @@ Options passable to XangaScraper:
 03-23-2009: refactor to use heredocs instead of external xml files
 03-29-2009: add scraping of upto 1 page of comments
 03-31-2009: fix bug; I thought gsub! would return modified string; it does not. I'm a dummy!
+05-08-2012: a few realiziation: hpricot is dead. UGH! I heart hpricot. I miss it sorely.
+            At some point I might consider using nokogiri?
+            For now, this is considered DEAD and NOT WORKING!
